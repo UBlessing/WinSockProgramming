@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 	char clientHost[15];
 	unsigned short clientPort;
 	
-	char msg[] = "�ȳ��ϼ���";
+	char msg[] = "¾È³çÇÏ¼¼¿ä";
 	
 	if(argc != 2) {
 		printf("Usage: %s <port> \n", argv[0]);
