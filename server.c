@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 	char clientHost[15];
 	unsigned short clientPort;
 	
-	char msg[] = "¾È³çÇÏ¼¼¿ä";
+	char msg[] = "안녕하세요";
 	
 	if(argc != 2) {
 		printf("Usage: %s <port> \n", argv[0]);
@@ -58,6 +58,7 @@ int main(int argc, char *argv[]) {
 	while(1) {
 		clientSock = accept(serverSock, (SOCKADDR*)&serverSock, &clientAddrSize);
 		if(clientSock == INVALID_SOCKET) {
+			closesocket(clientSock);
 			continue;
 		}
 		
@@ -67,7 +68,11 @@ int main(int argc, char *argv[]) {
 		
 		printf("%s:%d Connected!\n", clientHost, clientPort);
 			
-		send(clientSock, msg, sizeof(msg), 0);
+		if(send(clientSock, msg, sizeof(msg), 0) == SOCKET_ERROR) {
+			printf("Failed send to msg \n");
+			closesocket(clientSock);
+			continue;
+		}
 		printf("Send to Complete : %s \n", msg);
 		closesocket(clientSock);
 	}
