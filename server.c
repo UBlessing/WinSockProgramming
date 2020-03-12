@@ -57,6 +57,9 @@ int main(int argc, char *argv[]) {
 	clientAddrSize = sizeof(clientAddr);
 	while(1) {
 		clientSock = accept(serverSock, (SOCKADDR*)&serverSock, &clientAddrSize);
+		if(clientSock == INVALID_SOCKET) {
+			continue;
+		}
 		
 		clientHostPtr = inet_ntoa(clientAddr.sin_addr);
 		strcpy_s(clientHost, sizeof(clientHost), clientHostPtr);
