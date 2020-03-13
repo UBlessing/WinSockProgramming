@@ -1,83 +1,69 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <winsock2.h>
-#include <windows.h>
 
-#define pass ;
-#define pause system("PAUSE")
+#define bufferSize 1024
 
 int main(int argc, char *argv[]) {
 	WSADATA wsaData;
-	SOCKET serverSock, clientSock;
-	SOCKADDR_IN serverAddr, clientAddr;
-	int clientAddrSize;
+	SOCKET connectSock;
+	SOCKADDR_IN serverAddr;
+	int strLen;
+	char msg[bufferSize];
 	
-	char *clientHostPtr;
-	char clientHost[15];
-	unsigned short clientPort;
-	
-	char msg[] = "안녕하세요";
-	
-	if(argc != 2) {
-		printf("Usage: %s <port> \n", argv[0]);
-		pause;
+	if(argc != 3) {
+		printf("Usage: %s <ip> <port> \n");
 		exit(0);
 	}
 	
-	if(WSAStartup(MAKEWORD(2, 2), &wsaData) != 0 ) {
-		perror("WSAStartup() Error");
-		pause;
-		exit(-1);
+	if(WSAStartup(MAKEWORD(2, 2), &wsaData)) {
+		perror("WSAStartup() error");
 	}
 	
 	memset(&serverAddr, 0, sizeof(serverAddr));
 	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	serverAddr.sin_port = htons(atoi(argv[1]));
+	serverAddr.sin_addr.s_addr = inet_addr(argv[1]);
+	serverAddr.sin_port = htons(atoi(argv[2]));
 	
-	serverSock = socket(PF_INET, SOCK_STREAM, 0);
-	if(serverSock == INVALID_SOCKET) {
-		perror("socket() Error");
-		pause;
-		exit(-1);
+	connectSock = socket(PF_INET, SOCK_STREAM, 0);
+	if(connectSock == INVALID_SOCKET) {
+		perror("socket() error");
 	}
 	
-	if(bind(serverSock, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-		perror("bind() Error");
-		pause;
-		exit(-1);
+	if(connect(connectSock, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+		perror("connect() error");
+	} else {
+		printf("Connected! \n");
 	}
 	
-	if(listen(serverSock, 0) == SOCKET_ERROR) {
-		perror("listen() Error");
-		pause;
-		exit(-1);
+	fputs("('exit' to quit)>", stdout);
+	fgets(msg, bufferSize, stdin);
+		
+	if(!strcmp(msg, "exit\n")) {
+		printf("Exit! \n");
+		closesocket(connectSock);
+		WSACleanup();
+		return 0;
 	}
-	
-	clientAddrSize = sizeof(clientAddr);
-	while(1) {
-		clientSock = accept(serverSock, (SOCKADDR*)&serverSock, &clientAddrSize);
-		if(clientSock == INVALID_SOCKET) {
-			closesocket(clientSock);
-			continue;
+		
+	send(connectSock, msg, bufferSize, 0);
+	while((strLen = recv(connectSock, msg, bufferSize, 0)) != 0) {
+		msg[strLen] = '\0';
+		printf("Mssage from server : %s \n", msg);
+		
+		fputs("('exit' to quit)>", stdout);
+		fgets(msg, bufferSize, stdin);
+		
+		if(!strcmp(msg, "exit\n")) {
+			printf("Exit! \n");
+			break;
 		}
 		
-		clientHostPtr = inet_ntoa(clientAddr.sin_addr);
-		strcpy_s(clientHost, sizeof(clientHost), clientHostPtr);
-		clientPort = ntohs(clientAddr.sin_port);
-		
-		printf("%s:%d Connected!\n", clientHost, clientPort);
-			
-		if(send(clientSock, msg, sizeof(msg), 0) == SOCKET_ERROR) {
-			printf("Failed send to msg \n");
-			closesocket(clientSock);
-			continue;
-		}
-		printf("Send to Complete : %s \n", msg);
-		closesocket(clientSock);
+		send(connectSock, msg, bufferSize, 0);
 	}
 	
-	closesocket(serverSock);
+	closesocket(connectSock);
 	WSACleanup();
 	return 0;
 }
