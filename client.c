@@ -1,25 +1,24 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <winsock2.h>
-#include <windows.h>
 
-#define pass ;
-#define pause system("PAUSE")
+#define bufferSize 1024
 
 int main(int argc, char *argv[]) {
 	WSADATA wsaData;
-	SOCKET connSock;
+	SOCKET connectSock;
 	SOCKADDR_IN serverAddr;
-	
-	char msg[11] = {0, };
+	int strLen;
+	char msg[bufferSize];
 	
 	if(argc != 3) {
-		printf("Usage: %s <ip> <port> \n", argv[0]);
+		printf("Usage: %s <ip> <port> \n");
 		exit(0);
 	}
 	
-	if(WSAStartup(MAKEWORD(2, 2), &wsaData) != 0){
-		perror("WSAStartup() Error");
-		pause;
+	if(WSAStartup(MAKEWORD(2, 2), &wsaData)) {
+		perror("WSAStartup() error");
 	}
 	
 	memset(&serverAddr, 0, sizeof(serverAddr));
@@ -27,19 +26,44 @@ int main(int argc, char *argv[]) {
 	serverAddr.sin_addr.s_addr = inet_addr(argv[1]);
 	serverAddr.sin_port = htons(atoi(argv[2]));
 	
-	connSock = socket(PF_INET, SOCK_STREAM, 0);
-	if(connSock == INVALID_SOCKET) {
-		perror("socket() Error");
-		pause;
+	connectSock = socket(PF_INET, SOCK_STREAM, 0);
+	if(connectSock == INVALID_SOCKET) {
+		perror("socket() error");
 	}
 	
-	if(connect(connSock, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-		perror("connect() Error");
-		pause;
+	if(connect(connectSock, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+		perror("connect() error");
+	} else {
+		printf("Connected! \n");
 	}
 	
-	recv(connSock, msg, sizeof(msg), 0);
-	printf("receive to server : %s \n", msg);
+	fputs("('exit' to quit)>", stdout);
+	fgets(msg, bufferSize, stdin);
+		
+	if(!strcmp(msg, "exit\n")) {
+		printf("Exit! \n");
+		closesocket(connectSock);
+		WSACleanup();
+		return 0;
+	}
+		
+	send(connectSock, msg, bufferSize, 0);
+	while((strLen = recv(connectSock, msg, bufferSize, 0)) != 0) {
+		msg[strLen] = '\0';
+		printf("Mssage from server : %s \n", msg);
+		
+		fputs("('exit' to quit)>", stdout);
+		fgets(msg, bufferSize, stdin);
+		
+		if(!strcmp(msg, "exit\n")) {
+			printf("Exit! \n");
+			break;
+		}
+		
+		send(connectSock, msg, bufferSize, 0);
+	}
 	
+	closesocket(connectSock);
+	WSACleanup();
 	return 0;
 }
