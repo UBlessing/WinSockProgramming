@@ -1,69 +1,62 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <winsock2.h>
 
 #define bufferSize 1024
 
 int main(int argc, char *argv[]) {
 	WSADATA wsaData;
-	SOCKET connectSock;
-	SOCKADDR_IN serverAddr;
-	int strLen;
+	SOCKET serverSock, clientSock;
+	SOCKADDR_IN serverAddr, clientAddr;
+	int clientAddrSize;
+	int i, strLen;
 	char msg[bufferSize];
 	
-	if(argc != 3) {
-		printf("Usage: %s <ip> <port> \n");
+	if(argc != 2) {
+		printf("Usage : %s <port> \n", argv[0]);
 		exit(0);
 	}
 	
-	if(WSAStartup(MAKEWORD(2, 2), &wsaData)) {
+	if(WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
 		perror("WSAStartup() error");
 	}
 	
 	memset(&serverAddr, 0, sizeof(serverAddr));
 	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_addr.s_addr = inet_addr(argv[1]);
-	serverAddr.sin_port = htons(atoi(argv[2]));
+	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serverAddr.sin_port = htons(atoi(argv[1]));
 	
-	connectSock = socket(PF_INET, SOCK_STREAM, 0);
-	if(connectSock == INVALID_SOCKET) {
+	serverSock = socket(PF_INET, SOCK_STREAM, 0);
+	if(serverSock == INVALID_SOCKET) {
 		perror("socket() error");
 	}
 	
-	if(connect(connectSock, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-		perror("connect() error");
-	} else {
-		printf("Connected! \n");
+	if(bind(serverSock, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+		perror("bind() error");
 	}
 	
-	fputs("('exit' to quit)>", stdout);
-	fgets(msg, bufferSize, stdin);
-		
-	if(!strcmp(msg, "exit\n")) {
-		printf("Exit! \n");
-		closesocket(connectSock);
-		WSACleanup();
-		return 0;
+	if(listen(serverSock, 5) == SOCKET_ERROR) {
+		perror("listen() error");
 	}
-		
-	send(connectSock, msg, bufferSize, 0);
-	while((strLen = recv(connectSock, msg, bufferSize, 0)) != 0) {
-		msg[strLen] = '\0';
-		printf("Mssage from server : %s \n", msg);
-		
-		fputs("('exit' to quit)>", stdout);
-		fgets(msg, bufferSize, stdin);
-		
-		if(!strcmp(msg, "exit\n")) {
-			printf("Exit! \n");
-			break;
+	
+	clientAddrSize = sizeof(clientAddr);
+	for(i = 0; i < 5; i++) {
+		clientSock = accept(serverSock, (SOCKADDR*)&clientAddr, &clientAddrSize);
+		if(clientSock == -1) {
+			perror("accept() error");
+		} else {
+			printf("Connected! \n");
 		}
 		
-		send(connectSock, msg, bufferSize, 0);
+		while((strLen = recv(clientSock, msg, bufferSize, 0)) != 0) {
+			printf("receive to client : %s \n", msg);
+			send(clientSock, msg, strLen, 0);
+		}
+		
+		closesocket(clientSock);
 	}
 	
-	closesocket(connectSock);
+	closesocket(serverSock);
 	WSACleanup();
 	return 0;
 }
